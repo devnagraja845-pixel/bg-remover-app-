@@ -4,74 +4,70 @@ from PIL import Image, ImageEnhance, ImageOps
 import io
 import zipfile
 
-# --- 1. THEME SELECTION (Sidebar) ---
+# --- 1. ULTIMATE REFRESH & SCROLL LOCK (CSS + JS) ---
+st.set_page_config(page_title="Pro Studio AI", layout="centered")
+
+# Yeh script phone ko refresh karne se rokega
+st.components.v1.html(
+    """
+    <script>
+    window.addEventListener('load', function() {
+        var lastY = 0;
+        var content = window.document.querySelector('.main');
+        window.document.addEventListener('touchstart', function(e) {
+            lastY = e.touches[0].clientY;
+        }, {passive: false});
+
+        window.document.addEventListener('touchmove', function(e) {
+            var currY = e.touches[0].clientY;
+            if (currY > lastY && window.scrollY <= 0) {
+                // Agar user top par hai aur neeche khinch raha hai, toh block karo
+                e.preventDefault();
+            }
+            lastY = currY;
+        }, {passive: false});
+    });
+    </script>
+    """,
+    height=0,
+)
+
+# --- 2. THEME SELECTION ---
 st.sidebar.title("⚙️ Settings")
 theme_choice = st.sidebar.selectbox("App Theme Select Karein:", ["Classic Blue", "Dark Grey", "Clean White"])
 
-# --- 2. DYNAMIC CSS BASED ON THEME ---
 if theme_choice == "Classic Blue":
-    bg_color = "#0f172a"
-    text_color = "#f1f5f9"
-    card_bg = "#1e293b"
-    btn_color = "#3b82f6"
-    accent = "#60a5fa"
+    bg_color, text_color, card_bg, btn_color, accent = "#0f172a", "#f1f5f9", "#1e293b", "#3b82f6", "#60a5fa"
 elif theme_choice == "Dark Grey":
-    bg_color = "#121212"
-    text_color = "#e0e0e0"
-    card_bg = "#1e1e1e"
-    btn_color = "#4a5568"
-    accent = "#a0aec0"
-else: # Clean White
-    bg_color = "#ffffff"
-    text_color = "#1a202c"
-    card_bg = "#f7fafc"
-    btn_color = "#3182ce"
-    accent = "#2b6cb0"
+    bg_color, text_color, card_bg, btn_color, accent = "#121212", "#e0e0e0", "#1e1e1e", "#4a5568", "#a0aec0"
+else:
+    bg_color, text_color, card_bg, btn_color, accent = "#ffffff", "#1a202c", "#f7fafc", "#3182ce", "#2b6cb0"
 
 st.markdown(f"""
 <style>
+    /* Pull-to-refresh block karne ke liye CSS */
     html, body, [data-testid="stAppViewContainer"], .stApp {{
         background-color: {bg_color} !important;
         color: {text_color} !important;
-        overscroll-behavior-y: none !important;
-        touch-action: pan-x pan-y !important;
+        overscroll-behavior-y: contain !important;
+        overscroll-behavior-x: none !important;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }}
     .stMarkdown p, h1, h2, h3, label {{ color: {text_color} !important; text-align: center; }}
-    
-    /* File Uploader Styling */
-    [data-testid="stFileUploader"] {{
-        background-color: {card_bg};
-        border: 2px dashed {accent};
-        border-radius: 10px;
-    }}
-    
-    /* Button Styling */
-    .stButton>button {{
-        background-color: {btn_color};
-        color: white;
-        border-radius: 8px;
-        width: 100%;
-        border: none;
-        padding: 10px;
-        font-weight: bold;
-    }}
-    .stButton>button:hover {{ border: 1px solid {accent}; }}
-    
-    /* Footer Styling */
-    .footer {{
-        text-align: center;
-        margin-top: 50px;
-        padding-top: 20px;
-        border-top: 1px solid {accent}55;
-    }}
+    [data-testid="stFileUploader"] {{ background-color: {card_bg}; border: 2px dashed {accent}; border-radius: 10px; }}
+    .stButton>button {{ background-color: {btn_color}; color: white; border-radius: 8px; width: 100%; font-weight: bold; border: none; }}
 </style>
 """, unsafe_allow_html=True)
 
 # --- 3. MAIN APP LOGIC ---
-st.title("✨ Pro Studio V4")
-st.markdown(f"<p style='text-align: center;'>AI Photo Editor - {theme_choice} Edition</p>", unsafe_allow_html=True)
+st.title("✨ Pro Studio V5")
+st.markdown(f"<p style='text-align: center;'>Made by <b>RAVI</b></p>", unsafe_allow_html=True)
 
-# --- LUT LOGIC (Same as V3) ---
+# --- LUT LOGIC ---
 def apply_filter(img, filter_name):
     if img.mode != 'RGBA': img = img.convert('RGBA')
     r, g, b, a = img.split()
@@ -111,19 +107,13 @@ if uploaded_files:
     edit_mode = st.radio("Editing Mode:", ("✂️ Background Remove + LUT", "🎨 Sirf LUT Lagayein"))
     selected_lut = st.selectbox("Select Filter:", options=lut_list)
     
-    # Preview Layout
-    col1, col2 = st.columns(2)
-    with col1:
-        st.write("Original")
-        st.image(uploaded_files[0], use_container_width=True)
-    with col2:
-        st.write("Preview")
-        with st.spinner("Wait..."):
-            img = Image.open(uploaded_files[0])
-            res = remove(img) if "✂️" in edit_mode else img
-            st.image(apply_filter(res, selected_lut), use_container_width=True)
+    # Preview
+    with st.spinner("Loading Preview..."):
+        img = Image.open(uploaded_files[0])
+        res = remove(img) if "✂️" in edit_mode else img
+        st.image(apply_filter(res, selected_lut), use_container_width=True)
 
-    if st.button("🚀 Process & Download All"):
+    if st.button("🚀 Save & Download All"):
         zip_buffer = io.BytesIO()
         progress_bar = st.progress(0)
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
@@ -135,11 +125,11 @@ if uploaded_files:
                 final.save(buf, format='PNG')
                 zip_file.writestr(f"Ravi_Edit_{file.name.split('.')[0]}.png", buf.getvalue())
                 progress_bar.progress((index + 1) / len(uploaded_files))
-        st.download_button("⬇️ Download ZIP", data=zip_buffer.getvalue(), file_name="Ravi_Pro_Studio_Edits.zip")
+        st.download_button("⬇️ Download ZIP", data=zip_buffer.getvalue(), file_name="Ravi_Pro_Studio.zip")
 
-# --- FOOTER (MADE BY RAVI) ---
+# --- FOOTER ---
 st.markdown(f"""
-    <div class='footer'>
+    <div style='text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid {accent}55;'>
         <p style='color: {accent}; font-size: 14px;'>Made by <b style='font-size: 18px;'>RAVI</b></p>
     </div>
 """, unsafe_allow_html=True)
