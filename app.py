@@ -3,130 +3,114 @@ from rembg import remove
 from PIL import Image, ImageEnhance, ImageOps
 import io
 
-# --- 1. THEME & UI SETTINGS (Sidebar Enabled for Pro Look) ---
-# initial_sidebar_state="collapsed" means sidebar exists but is closed by default
-st.set_page_config(page_title="Pro Studio AI - Ravi Edition", layout="centered", initial_sidebar_state="collapsed")
+# --- 1. UI & THEME SETUP ---
+st.set_page_config(page_title="Pro Studio AI - Ravi Edition", layout="centered", initial_sidebar_state="expanded")
 
-# Theme Selection in Sidebar (Restored Pro Features)
-st.sidebar.title("⚙️ Settings")
-theme_choice = st.sidebar.selectbox("App Theme Select Karein:", ["Classic Dark", "Oceanic Blue", "Clean White"])
+# Sidebar for Professional Settings
+st.sidebar.title("🛠️ Studio Settings")
+theme_choice = st.sidebar.selectbox("App Theme:", ["Classic Dark", "Oceanic Blue", "Clean White"])
 
-# Dynamic CSS for Professional Look (Restored V6 style)
+# --- NEW FEATURES IN SIDEBAR ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("📐 1. Auto-Resizer")
+size_preset = st.sidebar.selectbox("Social Media Size:", 
+    ["Original Size", "YouTube Thumbnail (16:9)", "Shorts/Reels (9:16)", "Instagram Post (1:1)"])
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📝 2. Bulk Renamer")
+file_prefix = st.sidebar.text_input("File Naam Prefix:", "Ravi_Studio")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🖼️ 3. Background Settings")
+bg_type = st.sidebar.radio("Background Style:", ["Transparent", "Solid Color", "Custom Image"])
+bg_color = st.sidebar.color_picker("Pick Color:", "#ffffff") if bg_type == "Solid Color" else None
+bg_image_file = st.sidebar.file_uploader("Upload BG Image:", type=['jpg', 'png', 'jpeg']) if bg_type == "Custom Image" else None
+
+# Theme CSS
 if theme_choice == "Classic Dark":
-    bg_color, text_color, card_bg, btn_color, accent = "#121212", "#e0e0e0", "#1e1e1e", "#4a5568", "#ff9f43"
+    bg_c, txt_c, card_c, btn_c, acc = "#121212", "#e0e0e0", "#1e1e1e", "#4a5568", "#ff9f43"
 elif theme_choice == "Oceanic Blue":
-    bg_color, text_color, card_bg, btn_color, accent = "#0f172a", "#f1f5f9", "#1e293b", "#3b82f6", "#60a5fa"
-else: # Clean White
-    bg_color, text_color, card_bg, btn_color, accent = "#ffffff", "#1a202c", "#f7fafc", "#3182ce", "#2b6cb0"
+    bg_c, txt_c, card_c, btn_c, acc = "#0f172a", "#f1f5f9", "#1e293b", "#3b82f6", "#60a5fa"
+else:
+    bg_c, txt_c, card_c, btn_c, acc = "#ffffff", "#1a202c", "#f7fafc", "#3182ce", "#2b6cb0"
 
 st.markdown(f"""
 <style>
-    /* 🛑 Anti-Refresh for Android 🛑 */
-    html, body, [data-testid="stAppViewContainer"], .stApp {{
-        background-color: {bg_color} !important;
-        color: {text_color} !important;
-        overscroll-behavior-y: contain !important;
-    }}
-    
-    /* Professional Layout */
-    .stMarkdown p, h1, h2, h3, label, .stSelectbox {{ color: {text_color} !important; text-align: center; font-family: 'Poppins', sans-serif; }}
-    
-    /* File Uploader Box (Styled) */
-    [data-testid="stFileUploader"] {{
-        background-color: {card_bg};
-        border: 2px dashed {accent};
-        border-radius: 10px;
-        padding: 10px;
-    }}
-    
-    /* Elegant Buttons with Orange/Accent color */
-    .stButton>button {{
-        background-color: {accent};
-        color: {bg_color} !important;
-        border-radius: 8px;
-        width: 100%;
-        font-weight: bold;
-        border: none;
-        padding: 12px;
-        transition: all 0.3s ease;
-    }}
-    .stButton>button:hover {{ transform: translateY(-2px); }}
-    
-    /* Expander/Card Styling */
-    .stExpander {{ background-color: {card_bg}; border-radius: 10px; border: 1px solid {accent}33; }}
+    html, body, [data-testid="stAppViewContainer"], .stApp {{ background-color: {bg_c} !important; color: {txt_c} !important; overscroll-behavior-y: contain !important; }}
+    .stMarkdown p, h1, h2, h3, label {{ color: {txt_c} !important; text-align: center; }}
+    .stButton>button {{ background-color: {acc}; color: {bg_c} !important; border-radius: 8px; width: 100%; font-weight: bold; border: none; padding: 12px; }}
+    [data-testid="stFileUploader"] {{ background-color: {card_c}; border: 2px dashed {acc}; border-radius: 10px; }}
 </style>
 """, unsafe_allow_html=True)
 
-# --- 2. COLOR GRAD DEEP ENGINE (Same as V7) ---
-@st.cache_resource
-def apply_filter(img, filter_name):
-    if img.mode != 'RGBA':
-        img = img.convert('RGBA')
-    r, g, b, a = img.split()
-    rgb_img = Image.merge("RGB", (r, g, b))
-    enhancer_color = ImageEnhance.Color(rgb_img)
-    enhancer_contrast = ImageEnhance.Contrast(rgb_img)
-    enhancer_bright = ImageEnhance.Brightness(rgb_img)
+# --- HELPER FUNCTIONS ---
+def resize_image(img, preset):
+    if preset == "Original Size": return img
+    target_sizes = {"YouTube Thumbnail (16:9)": (1280, 720), "Shorts/Reels (9:16)": (1080, 1920), "Instagram Post (1:1)": (1080, 1080)}
+    target_size = target_sizes[preset]
+    # Resize keeping aspect ratio (fit/pad)
+    img.thumbnail(target_size, Image.Resampling.LANCZOS)
+    new_img = Image.new("RGBA", target_size, (0, 0, 0, 0))
+    new_img.paste(img, ((target_size[0] - img.size[0]) // 2, (target_size[1] - img.size[1]) // 2))
+    return new_img
+
+def apply_background(subject, bg_type, color, bg_img_file):
+    final_w, final_h = subject.size
+    if bg_type == "Transparent": return subject
     
-    if "01" in filter_name: rgb_img = enhancer_contrast.enhance(1.2)
-    elif "02" in filter_name: rgb_img = enhancer_color.enhance(1.4); rgb_img = enhancer_contrast.enhance(1.1)
-    elif "03" in filter_name: rgb_img = ImageOps.grayscale(rgb_img).convert("RGB"); rgb_img = enhancer_contrast.enhance(1.3)
-    elif "04" in filter_name: rgb_img = enhancer_color.enhance(1.5)
+    if bg_type == "Solid Color":
+        base = Image.new("RGBA", (final_w, final_h), color)
+    else: # Custom Image
+        if bg_img_file:
+            bg_img = Image.open(bg_img_file).convert("RGBA").resize((final_w, final_h), Image.Resampling.LANCZOS)
+            base = bg_img
+        else:
+            base = Image.new("RGBA", (final_w, final_h), (255, 255, 255, 255))
     
-    return Image.merge("RGBA", (rgb_img.split()[0], rgb_img.split()[1], rgb_img.split()[2], a))
+    base.paste(subject, (0, 0), subject)
+    return base
 
-lut_list = ["00. Original", "01. Basic Crisp", "02. Cinematic Teal", "03. Moody Noir", "04. Bollywood Punch"]
+# --- MAIN APP ---
+st.title("🚀 Ravi Creator Studio")
+st.markdown(f"<p style='text-align: center;'>All-in-One Image Production Tool</p>", unsafe_allow_html=True)
 
-# --- 3. MAIN APP LOGIC ---
-st.title("✨ Pro Studio AI")
-st.markdown("<p style='text-align: center; color: #a0aec0;'>HD Cutout + Color Grading - Ravi Edition</p>", unsafe_allow_html=True)
-
-# User advice about limitations
-st.info("Portait Photos par best results milega. Complex Graphics par AI struggling karega.")
-
-uploaded_files = st.file_uploader("Photos upload karein", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Photos upload karein (Social Media ya Projects ke liye)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
 if uploaded_files:
-    edit_mode = st.radio("Editing Mode Select Karein:", ("✂️ Background Remove + LUT", "🎨 Sirf LUT Lagayein (No Cutout)"))
-    selected_lut = st.selectbox("Select Color Filter:", options=lut_list)
+    edit_mode = st.checkbox("✂️ Remove Background", value=True)
     st.markdown("---")
     
-    # Process Photos Centered
-    col_l, col_m, col_r = st.columns([1,3,1])
-    with col_m:
-        st.subheader("Processing Your Photos")
-        
     for index, file in enumerate(uploaded_files):
-        with st.expander(f"📷 Photo {index+1}: {file.name}", expanded=True):
+        with st.expander(f"🎬 Editing: {file.name}", expanded=True):
             img = Image.open(file)
             
-            with st.spinner(f"Processing..."):
-                try:
-                    # RAM bachane ke liye simple, crash-proof logic
-                    if "✂️" in edit_mode:
-                        # Direct, fast, standard cutout. 
-                        # HD features are disabled for stability on complex graphics.
-                        processed = remove(img) 
-                    else:
-                        processed = img.convert("RGBA")
-                    
-                    # Apply Filter
-                    final = apply_filter(processed, selected_lut)
-                    
-                    # Show Preview
-                    st.image(final, use_container_width=True)
-                    
-                    # Direct PNG Download Button
-                    buf = io.BytesIO()
-                    final.save(buf, format='PNG')
-                    st.download_button(label=f"💾 Save Ravi_Edit_{index+1}.png", data=buf.getvalue(), file_name=f"Ravi_Pro_Studio_{index+1}.png", mime="image/png", key=f"btn_{index}")
-                except Exception as e:
-                    st.error(f"Error in {file.name}: {e}")
+            with st.spinner("Processing..."):
+                # 1. Background Removal
+                processed = remove(img) if edit_mode else img.convert("RGBA")
+                
+                # 2. Resize according to Preset
+                resized = resize_image(processed, size_preset)
+                
+                # 3. Apply Background Style
+                final = apply_background(resized, bg_type, bg_color, bg_image_file)
+                
+                # Show Preview
+                st.image(final, use_container_width=True)
+                
+                # 4. Download with Custom Naming
+                buf = io.BytesIO()
+                final.save(buf, format='PNG')
+                st.download_button(
+                    label=f"💾 Save {file_prefix}_{index+1}.png",
+                    data=buf.getvalue(),
+                    file_name=f"{file_prefix}_{index+1}.png",
+                    mime="image/png",
+                    key=f"dl_{index}"
+                )
 
-# --- FOOTER (MADE BY RAVI) ---
-# Footer with elegant design and Ravi name
+# --- FOOTER ---
 st.markdown(f"""
-    <div style='text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid {accent}33;'>
-        <p style='color: #888888; font-size: 14px;'>Made by <b style='color: {accent}; font-size: 18px;'>RAVI</b></p>
+    <div style='text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid {acc}33;'>
+        <p style='color: #888888; font-size: 14px;'>Made by <b style='color: {acc}; font-size: 18px;'>RAVI</b></p>
     </div>
 """, unsafe_allow_html=True)
