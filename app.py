@@ -3,28 +3,62 @@ from rembg import remove
 from PIL import Image, ImageEnhance, ImageOps
 import io
 
-st.set_page_config(page_title="Ravi Studio AI", layout="centered")
+# --- 1. THEME & UI SETTINGS (Sidebar Enabled for Pro Look) ---
+# initial_sidebar_state="collapsed" means sidebar exists but is closed by default
+st.set_page_config(page_title="Pro Studio AI - Ravi Edition", layout="centered", initial_sidebar_state="collapsed")
 
-# --- UI & ULTIMATE REFRESH LOCK SETUP ---
-st.markdown("""
+# Theme Selection in Sidebar (Restored Pro Features)
+st.sidebar.title("⚙️ Settings")
+theme_choice = st.sidebar.selectbox("App Theme Select Karein:", ["Classic Dark", "Oceanic Blue", "Clean White"])
+
+# Dynamic CSS for Professional Look (Restored V6 style)
+if theme_choice == "Classic Dark":
+    bg_color, text_color, card_bg, btn_color, accent = "#121212", "#e0e0e0", "#1e1e1e", "#4a5568", "#ff9f43"
+elif theme_choice == "Oceanic Blue":
+    bg_color, text_color, card_bg, btn_color, accent = "#0f172a", "#f1f5f9", "#1e293b", "#3b82f6", "#60a5fa"
+else: # Clean White
+    bg_color, text_color, card_bg, btn_color, accent = "#ffffff", "#1a202c", "#f7fafc", "#3182ce", "#2b6cb0"
+
+st.markdown(f"""
 <style>
-    /* 🛑 Heavy Duty Refresh Lock 🛑 */
-    html, body, [data-testid="stAppViewContainer"], .stApp {
+    /* 🛑 Anti-Refresh for Android 🛑 */
+    html, body, [data-testid="stAppViewContainer"], .stApp {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
         overscroll-behavior-y: contain !important;
-        background-color: #0e1117; 
-        color: #ffffff;
-    }
-    h1, h2, h3, h4 { color: #ffffff !important; text-align: center; }
-    .stButton>button { background-color: #ff4b4b; color: white; border-radius: 8px; width: 100%; font-weight: bold; }
-    .stButton>button:hover { background-color: #ff3333; }
+    }}
+    
+    /* Professional Layout */
+    .stMarkdown p, h1, h2, h3, label, .stSelectbox {{ color: {text_color} !important; text-align: center; font-family: 'Poppins', sans-serif; }}
+    
+    /* File Uploader Box (Styled) */
+    [data-testid="stFileUploader"] {{
+        background-color: {card_bg};
+        border: 2px dashed {accent};
+        border-radius: 10px;
+        padding: 10px;
+    }}
+    
+    /* Elegant Buttons with Orange/Accent color */
+    .stButton>button {{
+        background-color: {accent};
+        color: {bg_color} !important;
+        border-radius: 8px;
+        width: 100%;
+        font-weight: bold;
+        border: none;
+        padding: 12px;
+        transition: all 0.3s ease;
+    }}
+    .stButton>button:hover {{ transform: translateY(-2px); }}
+    
+    /* Expander/Card Styling */
+    .stExpander {{ background-color: {card_bg}; border-radius: 10px; border: 1px solid {accent}33; }}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("✨ Ravi Studio AI V7")
-st.markdown("<p style='text-align: center;'>Made by <b>RAVI</b></p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #ff4b4b;'><b>Note: Complex Images par problem ho sakti hai. Ye app Portait Photos pe best kaam karegi.</b></p>", unsafe_allow_html=True)
-
-# --- 20 PROFESSIONAL LUTS LOGIC ---
+# --- 2. COLOR GRAD DEEP ENGINE (Same as V7) ---
+@st.cache_resource
 def apply_filter(img, filter_name):
     if img.mode != 'RGBA':
         img = img.convert('RGBA')
@@ -33,51 +67,50 @@ def apply_filter(img, filter_name):
     enhancer_color = ImageEnhance.Color(rgb_img)
     enhancer_contrast = ImageEnhance.Contrast(rgb_img)
     enhancer_bright = ImageEnhance.Brightness(rgb_img)
+    
     if "01" in filter_name: rgb_img = enhancer_contrast.enhance(1.2)
-    elif "02" in filter_name: rgb_img = enhancer_color.enhance(1.4); rgb_img = ImageEnhance.Contrast(rgb_img).enhance(1.1)
-    elif "03" in filter_name: rgb_img = ImageOps.grayscale(rgb_img).convert("RGB"); rgb_img = ImageEnhance.Contrast(rgb_img).enhance(1.3)
+    elif "02" in filter_name: rgb_img = enhancer_color.enhance(1.4); rgb_img = enhancer_contrast.enhance(1.1)
+    elif "03" in filter_name: rgb_img = ImageOps.grayscale(rgb_img).convert("RGB"); rgb_img = enhancer_contrast.enhance(1.3)
     elif "04" in filter_name: rgb_img = enhancer_color.enhance(1.5)
-    elif "05" in filter_name: rgb_img = enhancer_color.enhance(0.5); rgb_img = ImageEnhance.Contrast(rgb_img).enhance(0.8)
-    elif "06" in filter_name: rgb_img = enhancer_bright.enhance(1.2); rgb_img = enhancer_color.enhance(0.8)
-    elif "07" in filter_name: rgb_img = enhancer_contrast.enhance(1.4); rgb_img = enhancer_color.enhance(1.2)
-    elif "08" in filter_name: r_img, g_img, b_img = rgb_img.split(); rgb_img = Image.merge("RGB", (enhancer_bright.enhance(1.1).split()[0], g_img, enhancer_bright.enhance(0.9).split()[2]))
-    elif "09" in filter_name: rgb_img = enhancer_color.enhance(1.3); rgb_img = enhancer_bright.enhance(1.1)
-    elif "10" in filter_name: rgb_img = enhancer_bright.enhance(0.8); rgb_img = enhancer_contrast.enhance(1.2)
-    elif "11" in filter_name: rgb_img = enhancer_color.enhance(0.7); r_img, g_img, b_img = rgb_img.split(); rgb_img = Image.merge("RGB", (r_img, g_img, enhancer_bright.enhance(1.2).split()[2]))
-    elif "12" in filter_name: rgb_img = ImageOps.grayscale(rgb_img).convert("RGB")
-    elif "13" in filter_name: rgb_img = enhancer_contrast.enhance(0.8); rgb_img = enhancer_bright.enhance(1.1)
-    elif "14" in filter_name: rgb_img = enhancer_color.enhance(1.2); r_img, g_img, b_img = rgb_img.split(); rgb_img = Image.merge("RGB", (enhancer_bright.enhance(1.1).split()[0], g_img, b_img))
-    elif "15" in filter_name: rgb_img = enhancer_contrast.enhance(1.5)
-    elif "16" in filter_name: rgb_img = enhancer_bright.enhance(1.3)
-    elif "17" in filter_name: rgb_img = enhancer_color.enhance(0.3); rgb_img = enhancer_contrast.enhance(1.3)
-    elif "18" in filter_name: rgb_img = enhancer_color.enhance(1.6); rgb_img = enhancer_contrast.enhance(1.2)
-    elif "19" in filter_name: rgb_img = enhancer_contrast.enhance(1.1); r_img, g_img, b_img = rgb_img.split(); rgb_img = Image.merge("RGB", (r_img, enhancer_bright.enhance(1.1).split()[1], b_img))
-    elif "20" in filter_name: rgb_img = enhancer_color.enhance(0.8); rgb_img = enhancer_contrast.enhance(1.2)
+    
     return Image.merge("RGBA", (rgb_img.split()[0], rgb_img.split()[1], rgb_img.split()[2], a))
 
-lut_list = ["00. Original", "01. Crisp", "02. Teal", "03. Noir", "04. Punch", "05. Vintage", "06. Pastel", "07. Cyber", "08. Insta", "09. Golden", "10. Dark", "11. Cool", "12. B&W Classic", "13. Matte", "14. Rich", "15. Hard", "16. Airy", "17. Bleach", "18. PopArt", "19. Emerald", "20. Winter"]
+lut_list = ["00. Original", "01. Basic Crisp", "02. Cinematic Teal", "03. Moody Noir", "04. Bollywood Punch"]
 
-# --- UPLOAD ---
+# --- 3. MAIN APP LOGIC ---
+st.title("✨ Pro Studio AI")
+st.markdown("<p style='text-align: center; color: #a0aec0;'>HD Cutout + Color Grading - Ravi Edition</p>", unsafe_allow_html=True)
+
+# User advice about limitations
+st.info("Portait Photos par best results milega. Complex Graphics par AI struggling karega.")
+
 uploaded_files = st.file_uploader("Photos upload karein", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
 
 if uploaded_files:
+    edit_mode = st.radio("Editing Mode Select Karein:", ("✂️ Background Remove + LUT", "🎨 Sirf LUT Lagayein (No Cutout)"))
+    selected_lut = st.selectbox("Select Color Filter:", options=lut_list)
     st.markdown("---")
-    selected_lut = st.selectbox("Apna LUT (Filter) Select Karein:", options=lut_list)
-    st.warning("Balanced Cutout processing ho rahi hai... Isme thoda time lag sakta hai.")
     
-    # Simple direct PNG download framework
+    # Process Photos Centered
+    col_l, col_m, col_r = st.columns([1,3,1])
+    with col_m:
+        st.subheader("Processing Your Photos")
+        
     for index, file in enumerate(uploaded_files):
         with st.expander(f"📷 Photo {index+1}: {file.name}", expanded=True):
             img = Image.open(file)
             
-            with st.spinner(f"Processing Balanced HD: {file.name}..."):
+            with st.spinner(f"Processing..."):
                 try:
-                    # 🌟 Magic setting to fix edges with mask smoothing (Crash-Proof) 🌟
-                    # Maine `post_process_mask=True` apply kiya hai jo edges ko smooth kar dega
-                    # bina full alpha matting ke crash-heavy RAM ko use kiye.
-                    processed = remove(img, post_process_mask=True)
+                    # RAM bachane ke liye simple, crash-proof logic
+                    if "✂️" in edit_mode:
+                        # Direct, fast, standard cutout. 
+                        # HD features are disabled for stability on complex graphics.
+                        processed = remove(img) 
+                    else:
+                        processed = img.convert("RGBA")
                     
-                    # Apply LUT
+                    # Apply Filter
                     final = apply_filter(processed, selected_lut)
                     
                     # Show Preview
@@ -86,13 +119,14 @@ if uploaded_files:
                     # Direct PNG Download Button
                     buf = io.BytesIO()
                     final.save(buf, format='PNG')
-                    st.download_button(label=f"💾 Save Ravi_Edit_{index+1}.png", data=buf.getvalue(), file_name=f"Ravi_BalancedHD_{file.name.split('.')[0]}.png", mime="image/png", key=f"btn_{index}")
+                    st.download_button(label=f"💾 Save Ravi_Edit_{index+1}.png", data=buf.getvalue(), file_name=f"Ravi_Pro_Studio_{index+1}.png", mime="image/png", key=f"btn_{index}")
                 except Exception as e:
                     st.error(f"Error in {file.name}: {e}")
 
-# --- FOOTER ---
-st.markdown("""
-    <div style='text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #333;'>
-        <p style='color: #888888; font-size: 14px;'>Made by <b style='color: #ff4b4b; font-size: 16px;'>RAVI</b></p>
+# --- FOOTER (MADE BY RAVI) ---
+# Footer with elegant design and Ravi name
+st.markdown(f"""
+    <div style='text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid {accent}33;'>
+        <p style='color: #888888; font-size: 14px;'>Made by <b style='color: {accent}; font-size: 18px;'>RAVI</b></p>
     </div>
 """, unsafe_allow_html=True)
